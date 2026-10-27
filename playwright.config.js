@@ -40,6 +40,15 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
 
+    module.exports = defineConfig({
+  use: {
+    headless: false,
+    launchOptions: {
+      slowMo: 1000,
+    },
+  },
+})
+
     // {
     //   name: 'firefox',
     //   use: { ...devices['Desktop Firefox'] },

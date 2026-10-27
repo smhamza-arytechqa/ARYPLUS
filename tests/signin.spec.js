@@ -38,4 +38,5 @@ test('sign-in with invalid credentials', async ({ page }) => {
   await page.getByPlaceholder('Enter email address').fill('smhamza@arytech.com');
   await page.getByPlaceholder('Enter password').fill('Test123');
   await page.getByRole('button', { name: 'Sign In' }).click();
+  await page.pause();
 });
