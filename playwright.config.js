@@ -47,7 +47,7 @@ export default defineConfig({
       slowMo: 1000,
     },
   },
-})
+}),
 
     // {
     //   name: 'firefox',
