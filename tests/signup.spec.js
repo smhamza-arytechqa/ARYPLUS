@@ -34,12 +34,12 @@ const { test, expect } = require('@playwright/test');
 // });
 
 
-test('sign-up with a valid email address and enter OTP & enter personal information', async ({
+test('sign-up & Onboarding flow', async ({
   page,
   context,
 }) => {
   test.setTimeout(120000);
-  const email = 'new4@yopmail.com';
+  const email = `sign@yopmail.com`;
 
   await page.goto('https://stg-fe.aryzap.com/signup');
 
@@ -52,11 +52,21 @@ test('sign-up with a valid email address and enter OTP & enter personal informat
   const mailPage = await context.newPage();
   await mailPage.goto('https://yopmail.com/');
   await mailPage.locator('#login').fill(email);
-  await mailPage.locator('#refreshbut').click();
 
   const inboxFrame = mailPage.frameLocator('#ifinbox');
   const latestEmail = inboxFrame.locator('div.m').first();
-  await expect(latestEmail).toBeVisible({ timeout: 30000 });
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    try {
+      await mailPage.locator('#refreshbut').click({ timeout: 5000 });
+    } catch (error) {
+      if (mailPage.isClosed()) throw error;
+      await mailPage.reload({ waitUntil: 'domcontentloaded' });
+      await mailPage.locator('#login').fill(email);
+    }
+    if (await latestEmail.isVisible()) break;
+    await mailPage.waitForTimeout(5000);
+  }
+  await expect(latestEmail).toBeVisible({ timeout: 5000 });
   await latestEmail.click();
 
   const emailFrame = mailPage.frameLocator('#ifmail');
@@ -111,13 +121,36 @@ test('sign-up with a valid email address and enter OTP & enter personal informat
   await expect(page).toHaveURL(/create-password/i, { timeout: 30000 });
 
   await page.getByPlaceholder('Enter name').fill('Test User');
-  await page.getByPlaceholder('Enter date of birth').fill('01/01/1990');
+  const dobInput = page.getByPlaceholder('Enter date of birth');
+  await dobInput.click();
+
+  const datePicker = page.getByRole('dialog', { name: 'Choose Date' });
+  await expect(datePicker).toBeVisible({ timeout: 10000 });
+  await datePicker.getByRole('button', { name: '2000', exact: true }).click();
+  await datePicker.getByRole('gridcell', {
+    name: /January 1st, 2000/i,
+  }).click();
+
   await page.getByPlaceholder('Enter password').fill('Test@123');
   await page.getByPlaceholder('Enter confirm password').fill('Test@123');
   await page.locator('#termsCheckboxLogin').check();
   await page.getByRole('button', { name: 'Next', exact: true }).click();
 
-  await expect(
-    page.getByText(/create|account|success|welcome/i).first(),
-  ).toBeVisible({ timeout: 30000 });
+  await expect(page).toHaveURL(/gender-selection/i, { timeout: 30000 });
+  await page.getByRole('button', { name: 'Male', exact: true }).click();
+  await page.getByRole('button', { name: '24-34', exact: true }).click();
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+  await expect(page).toHaveURL(/genre-preferences/i, { timeout: 30000 });
+  await page.getByRole('button', { name: 'Romance', exact: true }).click();
+  await page.getByRole('button', { name: 'Comedy', exact: true }).click();
+  await page.getByRole('button', { name: 'Action', exact: true }).click();
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+  await expect(page).toHaveURL('https://stg-fe.aryzap.com/', {
+    timeout: 30000,
+  });
+  await expect(page.getByText('Test User').first()).toBeVisible({
+    timeout: 30000,
+  });
 });
