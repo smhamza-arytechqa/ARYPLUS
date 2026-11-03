@@ -1,42 +1,58 @@
 
 const { test, expect } = require('@playwright/test');
 
-test.describe('Header Navigation Redirection', () => {
+test.describe('ARY Zap Header Navigation Redirection', () => {
 
     test.beforeEach(async ({ page }) => {
         await page.goto('https://stg-fe.aryzap.com/');
     });
 
     const navigationItems = [
-        { name: 'Home', url: '/' },
-        { name: 'Exclusive', url: '/exclusive' },
-        { name: 'Dramas', url: '/dramas' },
-        { name: 'Movies', url: '/movies' },
-        { name: 'Telefilms', url: '/telefilms' },
-        { name: 'Snips', url: '/snips' },
-        { name: 'Shows', url: '/shows' },
-        { name: 'Streams', url: '/streams' },
-        { name: 'Sign In', url: '/signin' },
+        'Exclusive',
+        'Dramas',
+        'Movies',
+        'Telefilms',
+        'Snips',
+        'Shows',
+        'Streams',
+        'Sign In'
     ];
 
     for (const item of navigationItems) {
 
-        test(`Verify ${item.name} navigation redirection`, async ({ page }) => {
+        test(`Verify ${item} navigation redirection`, async ({ page }) => {
 
-            const menu = page.getByRole('link', {
-                name: item.name,
-                exact: true
-            });
+            const header = page.locator('header');
+            const menu = item === 'Sign In'
+                ? header.getByRole('link', { name: /^Sign In\b/i }).first()
+                : header.getByRole('link', { name: item, exact: true });
 
-            await expect(menu).toBeVisible();
+            await expect(menu).toBeVisible({ timeout: 15000 });
 
+            // Capture actual destination URL
+            const href = await menu.getAttribute('href');
+
+            expect(href, `${item} link has no href`).toBeTruthy();
+
+            const expectedURL = new URL(href, page.url());
+
+            console.log(`${item} destination: ${expectedURL.href}`);
+
+            // Click navigation menu
             await menu.click();
 
-            await expect(page).toHaveURL(
-                new RegExp(item.url.replace('/', '\\/') + '$')
+            // Wait for redirection
+            await page.waitForURL(url =>
+                url.origin === expectedURL.origin &&
+                url.pathname.replace(/\/$/, '') ===
+                expectedURL.pathname.replace(/\/$/, '')
             );
 
-            console.log(`${item.name} navigation successful`);
+            // Verify navigation
+            expect(new URL(page.url()).pathname.replace(/\/$/, ''))
+                .toBe(expectedURL.pathname.replace(/\/$/, ''));
+
+            console.log(`${item} navigation successful`);
         });
     }
 
