@@ -74,6 +74,11 @@ test.describe('Video Player view on homepage', () => {
             () => video.evaluate(element => element.paused),
             { timeout: 15000 }
         ).toBe(false);
+
+        const initialTime = await video.evaluate(element => element.currentTime);
+        await expect.poll(
+            () => video.evaluate(element => element.currentTime),
+            { timeout: 15000 }
+        ).toBeGreaterThan(initialTime + 0.5);
     });
 });
-
